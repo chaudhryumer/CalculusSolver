@@ -21,8 +21,6 @@
 
 [![License: Quantum Logics Proprietary](https://img.shields.io/badge/license-Quantum%20Logics%20Proprietary-0f172a?style=flat-square&labelColor=1e293b)](LICENSE)
 [![slangmath](https://img.shields.io/badge/npm-slangmath-0f172a?style=flat-square&labelColor=1e293b&logo=npm)](https://npmjs.com/package/slangmath)
-[![AP Calc AB](https://img.shields.io/badge/AP%20Calc%20AB-92.4%25-22c55e?style=flat-square&labelColor=1e293b)](eval/benchmarks/ap_calculus.json)
-[![MIT 18.02](https://img.shields.io/badge/MIT%2018.02-78.3%25-22c55e?style=flat-square&labelColor=1e293b)](eval/benchmarks/multivariable.json)
 
 </div>
 
@@ -294,7 +292,7 @@ console.log(slangToLatex(result.expr));
 
 ## Benchmarks
 
-Evaluation uses `slangmath` itself as the judge. `evaluateFraction` is run on both the model's output and the ground truth at 50 random test points. Algebraic equivalence counts — not structural identity.
+Evaluation support is available via `eval/evaluate_model.py`, which compares model predictions against local dataset ground truth. The current repository does not include external benchmark JSON files under `eval/benchmarks`.
 
 | Benchmark                    | Metric                | Score     |
 | ---------------------------- | --------------------- | --------- |
@@ -444,61 +442,80 @@ const cs = new CalculusSolver({ endpoint: "http://localhost:8000" });
 ```
 CalculusSolver/
 │
-├── model/
-│   ├── architecture.py        ← top-level model class
-│   ├── tree_encoder.py        ← 8-layer Transformer + parent-child attention bias
-│   ├── tree_decoder.py        ← autoregressive decoder + SLaNg validity mask
-│   ├── rule_head.py           ← per-node calculus rule classifier
-│   └── step_tracer.py         ← step description auxiliary head
+├── api/
+│   ├── app.py
+│   └── routes/
+│       ├── solve.py
+│       └── validate.py
 │
-├── tokenizer/
-│   ├── slang_serializer.js    ← SLaNg tree ↔ DFS token sequence
-│   ├── vocab.json             ← all token types mapped to integer IDs
-│   └── positional_encoding.py ← (depth, sibling_idx, path_hash) encoding
+├── checkpoints/
+│   └── final/               ← trained model checkpoints
+│
+├── data/
+│   ├── dataset.json
+│   └── ...
 │
 ├── data_pipeline/
-│   ├── generate_synthetic.js  ← random trees + slangmath solves them
-│   ├── latex_to_slang.js      ← LaTeX bootstrap via latexToSlang()
-│   └── verify_with_slang.js   ← numerical equivalence check on any pair
+│   ├── data_generator.py
+│   ├── generate_slang_data.js
+│   ├── generate_flat_vocab.js
+│   ├── split_data.js
+│   └── verify.js
 │
-├── training/
-│   ├── pretrain.py            ← Stage 1: masked tree reconstruction
-│   ├── finetune.py            ← Stage 2: supervised SFT
-│   ├── verifier_loop.py       ← Stage 3: hard example mining
-│   └── config/
-│       ├── pretrain.yaml
-│       └── finetune.yaml
-│
-├── inference/
-│   ├── CalculusSolver.js      ← public JS class, browser-ready
-│   ├── solve.py               ← Python inference wrapper
-│   ├── beam_search.py         ← beam search with SLaNg validity mask
-│   └── verifier.js            ← post-hoc numerical check
-│
-├── api/
-│   ├── app.py                 ← FastAPI application
-│   └── routes/
-│       ├── solve.py           ← POST /solve
-│       └── validate.py        ← POST /validate
+├── docs/
+│   ├── ARCHITECTURE.md
+│   └── GUIDE.md
 │
 ├── eval/
-│   ├── slang_equivalence.js   ← evaluateFraction on model vs ground truth
-│   ├── step_accuracy.js       ← per-rule accuracy
-│   └── benchmarks/
-│       ├── ap_calculus.json
-│       ├── mit_ocw.json
-│       └── multivariable.json
+│   └── evaluate_model.py
 │
 ├── experiments/
-│   ├── test_diff.js
-│   ├── test_integration.js
-│   ├── test_optimization.js
-│   └── test_multivariable.js
+│   ├── advanced-examples.js
+│   ├── complete-guide.js
+│   ├── converter-demo.js
+│   ├── quick-slang.js
+│   ├── slang-basic-test-01.js
+│   ├── slang-extended-test.js
+│   ├── test-converter.js
+│   ├── test-slang.js
+│   └── v2-examples.js
 │
-├── ARCHITECTURE.md            ← full structural reference
-├── GUIDE.md                   ← developer guide
+├── inference/
+│   ├── inference_engine.py
+│   └── solve.py
+│
+├── model/
+│   └── ...
+│
 ├── package.json
 ├── requirements.txt
+├── setup.ps1
+├── setup.sh
+├── slang/
+│   ├── package.json
+│   ├── README.md
+│   ├── script/
+│   ├── src/
+│   ├── tests/
+│   └── website/
+│
+├── tokenizer/
+│   ├── generate_flat_vocab.js
+│   └── vocab.json
+│
+├── training/
+│   ├── model_trainer.py
+│   ├── pretrain.py
+│   ├── finetune.py
+│   ├── verifier_loop.py
+│   └── __init__.py
+│
+├── website/
+│   ├── index.html
+│   ├── package.json
+│   ├── README.md
+│   └── src/
+│
 └── README.md
 ```
 
@@ -555,22 +572,3 @@ See [`GUIDE.md`](GUIDE.md) for the detailed walkthrough and [`ARCHITECTURE.md`](
 _CalculusSolver — the intelligence layer above SLaNg. Same language, both directions._
 
 </div>
-
-## New Files (SLaNg-Native Pipeline)
-### tokenizer/vocab.json
-Complete token vocabulary mapping every SLaNg token to an integer ID.
-Generated by tokenizer/generate_flat_vocab.js
-Use: tokenizer/vocab_flat.json for flat lookups in code.
-### data_pipeline/generate_slang_data.js
-Generates training data as real SLaNg JSON objects (not string-based).
-Produces: data/slang_dataset.jsonl
-Run node data_pipeline/generate_slang_data.js-count 50000 --out
-data/slang_dataset.jsonl
-### data_pipeline/split_data.js
-Splits slang_dataset.jsonl into train/val/test (90/5/5).
-Produces: data/splits/train.jsonl, data/splits/val.jsonl, data/splits/test.jsonl
-Run: node data_pipeline/split_data.js
-### data_pipeline/verify.js
-Standalone numerical verifier. Checks model answers against real SLaNg functions.
-Run from command line: node data_pipeline/verify.js-input <json>-output <json>
-Exit 0 = verified, Exit 1 wrong answer.

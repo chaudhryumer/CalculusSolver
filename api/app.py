@@ -1,7 +1,12 @@
 import os
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from api.routes.solve import router as solve_router
 from api.routes.validate import router as validate_router
@@ -11,19 +16,18 @@ app = FastAPI(title="CalculusSolver API")
 
 
 def _resolve_model_path() -> str:
-    root = Path(__file__).resolve().parents[1]
     candidate_paths = []
     env_path = os.environ.get("MODEL_PATH")
     if env_path:
         configured_path = Path(env_path)
         candidate_paths.append(
-            configured_path if configured_path.is_absolute() else root / configured_path
+            configured_path if configured_path.is_absolute() else ROOT / configured_path
         )
     candidate_paths.extend(
         [
-            root / "checkpoints" / "final" / "best.pt",
-            root / "checkpoints" / "sft" / "best.pt",
-            root / "checkpoints" / "pretrain" / "best.pt",
+            ROOT / "checkpoints" / "final" / "best.pt",
+            ROOT / "checkpoints" / "sft" / "best.pt",
+            ROOT / "checkpoints" / "pretrain" / "best.pt",
         ]
     )
 
@@ -43,9 +47,7 @@ async def startup_event():
         model_path = _resolve_model_path()
         app.state.solver = CalculusSolverInference(
             model_path=model_path,
-            vocab_path=str(
-                Path(__file__).resolve().parents[1] / "tokenizer" / "vocab.json"
-            ),
+            vocab_path=str(ROOT / "tokenizer" / "vocab.json"),
             beam_size=5,
             max_len=256,
         )
