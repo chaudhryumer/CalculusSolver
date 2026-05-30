@@ -23,14 +23,18 @@ class CalculusSolverInference:
         if not os.path.exists(vocab_path):
             raise FileNotFoundError(f"Vocab file not found: {vocab_path}")
 
-        self.model_data = joblib.load(model_path)
+        self.model_data = self._load_checkpoint(model_path)
         self.vocab_map = load_vocab(vocab_path)
-        config = self.model_data["config"]
+        config = (
+            self.model_data.get("config", {})
+            if isinstance(self.model_data, dict)
+            else {}
+        )
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         rule_labels = self._load_rule_labels(vocab_path)
         self.model = CalculusModel(
-            vocab_size=config["vocab_size"],
+            vocab_size=config.get("vocab_size", len(self.vocab_map["token_to_id"])),
             rule_labels=rule_labels,
             hidden_dim=config.get("hidden_dim", 512),
             num_heads=config.get("num_heads", 8),
@@ -39,7 +43,7 @@ class CalculusSolverInference:
             dropout=config.get("dropout", 0.1),
             position_dim=config.get("position_dim", 3),
         ).to(self.device)
-        self.model.load_state_dict(self.model_data["model_state_dict"])
+        self.model.load_state_dict(self._resolve_state_dict(self.model_data))
         self.model.eval()
 
         self.beam_size = beam_size
@@ -65,6 +69,25 @@ class CalculusSolverInference:
             else:
                 rule_labels.append(token)
         return rule_labels
+
+    def _load_checkpoint(self, model_path: str) -> Any:
+        if model_path.endswith((".pt", ".pth")):
+            return torch.load(model_path, map_location="cpu")
+        try:
+            return joblib.load(model_path)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to load checkpoint {model_path}: {exc}"
+            ) from exc
+
+    def _resolve_state_dict(self, checkpoint: Any) -> Dict[str, Any]:
+        if isinstance(checkpoint, dict):
+            if "model_state" in checkpoint:
+                return checkpoint["model_state"]
+            if "model_state_dict" in checkpoint:
+                return checkpoint["model_state_dict"]
+            return checkpoint
+        raise ValueError("Unsupported checkpoint format for model state.")
 
     def _serialize_input(self, input_env: Dict[str, Any]) -> List[str]:
         script = os.path.join(os.path.dirname(__file__), "serialize_input.js")

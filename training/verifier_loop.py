@@ -71,6 +71,7 @@ def save_checkpoint(
     optimizer: torch.optim.Optimizer,
     step: int,
     output_dir: Path,
+    config: Dict[str, Any],
 ) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "best.pt"
@@ -79,6 +80,7 @@ def save_checkpoint(
             "step": step,
             "model_state": model.state_dict(),
             "optimizer_state": optimizer.state_dict(),
+            "config": config,
         },
         path,
     )
@@ -90,9 +92,16 @@ def build_model_from_checkpoint(
 ) -> tuple:
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
     token_to_id, _, rule_labels = load_vocab(str(vocab_path))
+    config = checkpoint.get("config", {})
     model = CalculusModel(
-        vocab_size=len(token_to_id),
+        vocab_size=config.get("vocab_size", len(token_to_id)),
         rule_labels=rule_labels,
+        hidden_dim=config.get("hidden_dim", 512),
+        num_heads=config.get("num_heads", 8),
+        num_layers=config.get("num_layers", 8),
+        ffn_dim=config.get("ffn_dim", 2048),
+        dropout=config.get("dropout", 0.1),
+        position_dim=config.get("position_dim", 3),
     ).to(device)
     model.load_state_dict(checkpoint["model_state"])
     model.train()

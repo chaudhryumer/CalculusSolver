@@ -3,6 +3,7 @@ import math
 import sys
 import time
 from pathlib import Path
+from typing import Any, Dict
 
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root))
@@ -52,7 +53,9 @@ def make_lr_scheduler(optimizer, warmup_steps: int, max_steps: int):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
-def save_checkpoint(model, optimizer, step: int, output_dir: Path):
+def save_checkpoint(
+    model, optimizer, step: int, output_dir: Path, config: Dict[str, Any]
+):
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "best.pt"
     torch.save(
@@ -60,6 +63,7 @@ def save_checkpoint(model, optimizer, step: int, output_dir: Path):
             "step": step,
             "model_state": model.state_dict(),
             "optimizer_state": optimizer.state_dict(),
+            "config": config,
         },
         path,
     )
@@ -157,7 +161,21 @@ def main():
                 start = time.time()
 
             if save_every and step % save_every == 0:
-                save_checkpoint(model, optimizer, step, Path(args.checkpoint_dir))
+                save_checkpoint(
+                    model,
+                    optimizer,
+                    step,
+                    Path(args.checkpoint_dir),
+                    {
+                        "vocab_size": len(dataset.token_to_id),
+                        "hidden_dim": model_cfg.get("hidden_dim", 512),
+                        "num_heads": model_cfg.get("num_heads", 8),
+                        "num_layers": model_cfg.get("num_layers", 8),
+                        "ffn_dim": model_cfg.get("ffn_dim", 2048),
+                        "dropout": model_cfg.get("dropout", 0.1),
+                        "position_dim": model_cfg.get("position_dim", 3),
+                    },
+                )
 
             if (
                 validate_every
@@ -169,7 +187,21 @@ def main():
             if step >= max_steps:
                 break
 
-    save_checkpoint(model, optimizer, step, Path(args.checkpoint_dir))
+    save_checkpoint(
+        model,
+        optimizer,
+        step,
+        Path(args.checkpoint_dir),
+        {
+            "vocab_size": len(dataset.token_to_id),
+            "hidden_dim": model_cfg.get("hidden_dim", 512),
+            "num_heads": model_cfg.get("num_heads", 8),
+            "num_layers": model_cfg.get("num_layers", 8),
+            "ffn_dim": model_cfg.get("ffn_dim", 2048),
+            "dropout": model_cfg.get("dropout", 0.1),
+            "position_dim": model_cfg.get("position_dim", 3),
+        },
+    )
     print(f"Pretraining complete. Saved checkpoint to {args.checkpoint_dir}")
 
 
