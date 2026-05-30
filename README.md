@@ -408,10 +408,27 @@ npm install        # installs slangmath and other JS deps
 pip install -r requirements.txt
 ```
 
+### Model checkpoint
+
+The API looks for a trained model checkpoint in this order:
+
+1. `MODEL_PATH`, if set
+2. `checkpoints/final/best.pt`
+3. `checkpoints/sft/best.pt`
+4. `checkpoints/pretrain/best.pt`
+
+If no compatible checkpoint exists yet, the FastAPI server still starts so non-model routes such as `/validate` remain available. Calls to `/solve` return HTTP `503` with the missing-checkpoint message until a checkpoint is trained or copied into one of the paths above.
+
+To use a checkpoint in a custom location:
+
+```bash
+MODEL_PATH=checkpoints/final/best.pt uvicorn api.app:app --host 0.0.0.0 --port 8000 --workers 1
+```
+
 Run the inference server:
 
 ```bash
-uvicorn api.app:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn api.app:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
 Point the JS client at it:
