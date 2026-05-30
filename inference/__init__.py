@@ -1,1 +1,3 @@
-# Make directory a package
+from .solve import CalculusSolverInference
+
+__all__ = ["CalculusSolverInference"]
