@@ -64,6 +64,7 @@ cd CalculusSolver
 # Python environment (training, inference server, evaluation)
 python -m venv .venv
 source .venv/bin/activate
+# fish shell: source .venv/bin/activate.fish
 pip install -r requirements.txt
 
 # Node (data pipeline, tokenizer, verifier)
