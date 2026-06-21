@@ -8,6 +8,7 @@ import json
 import os
 from typing import Any, Dict
 
+# pyrefly: ignore [missing-import]
 from groq import Groq
 
 
@@ -26,7 +27,7 @@ class GroqSolver:
             raise ValueError("GROQ_API_KEY environment variable is missing.")
         
         self.client = Groq(api_key=self.api_key)
-        self.model_name = os.environ.get("GROQ_MODEL", "llama3-70b-8192")
+        self.model_name = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
     def solve(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -47,7 +48,10 @@ class GroqSolver:
             "  \"verified\": true,\n"
             "  \"rule\": \"...\"\n"
             "}\n"
-            "No markdown blocks, no extra text, just raw JSON."
+            "Ensure 'expr' represents the math correctly using the SLaNg fraction tree format.\n"
+            "Example for 6x:\n"
+            "\"expr\": { \"numi\": { \"terms\": [ { \"coeff\": 6, \"var\": { \"x\": 1 } } ] }, \"deno\": 1 }\n"
+            "Return ONLY raw JSON. Do not include markdown blocks, explanations, or text outside the JSON object."
         )
 
         user_prompt = f"Solve this:\n{json.dumps(payload, indent=2)}"
