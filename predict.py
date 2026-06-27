@@ -1,9 +1,8 @@
 import sys
 import json
 import torch
-from model import CalculusSolverModel  # Shared architecture alignment module
+from solver_model import CalculusSolverModel  # Corrected shared module mapping
 
-# Load configurations securely
 with open("config.json", "r") as cfg_file:
     config = json.load(cfg_file)
 
@@ -14,10 +13,8 @@ def evaluate_cli_input():
         
     user_input = sys.argv[1]
     print(f"📥 Real Prompt Parsed: {user_input}")
-    
     v_size = config["vocab_size"]
     
-    # Character indexing tracking bounded within configuration limits
     encoded_src = [((ord(c) % (v_size - 3)) + 3) for c in user_input]
     if len(encoded_src) < 20:
         encoded_src += [0] * (20 - len(encoded_src))
@@ -25,7 +22,9 @@ def evaluate_cli_input():
     dummy_tgt = torch.zeros((1, 20), dtype=torch.long)
     
     rules_inverse = {0: "power rule", 1: "trig derivative", 2: "exponential rule", 3: "logarithmic rule"}
-    model = CalculusSolverModel(vocab_size=v_size)
+    
+    # 🎯 FIX 3: Dynamic Constructor Signature alignment (Removed embedding_dim param match)
+    model = CalculusSolverModel(vocab_size=v_size, hidden_dim=config["hidden_dim"])
     
     try:
         model.load_state_dict(torch.load("checkpoints/checkpoint_epoch_1.pt"))
