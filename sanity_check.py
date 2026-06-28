@@ -1,5 +1,11 @@
+import sys
+import os
 import json
 from pathlib import Path
+
+# Inject current directory to resolve module pathing context issues safely
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 from tokenizer.slang_serializer import serialize_slang_math
 
 def run_strict_validation():
@@ -16,9 +22,7 @@ def run_strict_validation():
             row = json.loads(line)
             row_counter += 1
             try:
-                # Validate source execution schema
                 serialize_slang_math(row["src_tokens"])
-                # Validate response/answer target schema shapes 
                 serialize_slang_math(row["tgt_input_tokens"])
             except ValueError as e:
                 print(f"❌ Exception raised at sample row line index {row_counter}: {e}")
