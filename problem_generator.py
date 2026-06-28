@@ -16,7 +16,8 @@ def generate_slang_dataset():
         }
         
     for i in range(100000):
-        rule = random.randint(0, 4)
+        # 🎯 FIX: Restrict to rules 0 to 3 matching the model's classification head bounds
+        rule = random.randint(0, 3)
         var_name = "x"
         
         if rule == 0: # Power Rule
@@ -41,19 +42,6 @@ def generate_slang_dataset():
             src_expr = make_frac([{"coeff": 1, "var": {"ln_x": 1}}])
             ans_expr = make_frac([{"coeff": 1, "var": {"x": -1}}])
             rule_id = 3
-            
-        else: # Sum/Difference
-            c1, c2 = random.randint(1, 15), random.randint(1, 15)
-            p1, p2 = random.randint(2, 5), random.randint(2, 5)
-            src_expr = make_frac([
-                {"coeff": c1, "var": {var_name: p1}},
-                {"coeff": -c2, "var": {var_name: p2}}
-            ])
-            ans_expr = make_frac([
-                {"coeff": c1 * p1, "var": {var_name: p1 - 1}},
-                {"coeff": -c2 * p2, "var": {var_name: p2 - 1}}
-            ])
-            rule_id = 4
 
         src_op_node = {
             "op": "diff",
@@ -80,7 +68,7 @@ def generate_slang_dataset():
             for item in split_data:
                 f.write(json.dumps(item) + "\n")
                 
-    print(f"✅ [Dataset Engine] 100,000 structural canonical rows generated successfully.")
+    print(f"✅ [Dataset Engine] 100,000 canonical rows with rule bounds [0-3] successfully generated.")
 
 if __name__ == "__main__":
     generate_slang_dataset()
