@@ -4,32 +4,19 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from pathlib import Path
 from solver_model import CalculusSolverModel
-
-# 🎯 FIX: Import team's real official tokenizer module safely
-try:
-    from tokenizer.slang_serializer import SlangTokenizer
-    HAS_REAL_TOKENIZER = True
-except (ImportError, ModuleNotFoundError):
-    HAS_REAL_TOKENIZER = False
+from tokenizer.slang_serializer import serialize_slang_math
 
 with open("config.json", "r") as cfg_file:
     config = json.load(cfg_file)
 
+# 🎯 FIX 3: Dynamic vocab alignment from central vocab.json
+with open("vocab.json", "r", encoding="utf-8") as f:
+    vocab_mapping = json.load(f)
+REAL_VOCAB_SIZE = len(vocab_mapping)
+
 class SlangTrainingDataset(Dataset):
-    def __init__(self, file_path, vocab_size):
+    def __init__(self, file_path):
         self.data = []
-        self.vocab_size = vocab_size
-        
-        # 🎯 FIX: Load project's real vocab.json if it exists to align embedding space
-        self.vocab_mapping = {}
-        vocab_path = Path("vocab.json")
-        if vocab_path.exists():
-            with open(vocab_path, "r", encoding="utf-8") as f:
-                self.vocab_mapping = json.load(f)
-                
-        if HAS_REAL_TOKENIZER:
-            self.tokenizer = SlangTokenizer()
-            
         with open(file_path, "r", encoding="utf-8") as f:
             for line in f:
                 self.data.append(json.loads(line))
@@ -37,49 +24,46 @@ class SlangTrainingDataset(Dataset):
     def __len__(self):
         return len(self.data)
         
-    def _real_tokenize_and_pad(self, text_or_tokens, max_len=20):
-        # Handle if text is already list of tokens or a raw string
-        if isinstance(text_or_tokens, list):
-            text_str = " ".join(text_or_tokens)
+    def _tokenize_envelope_to_ids(self, envelope_dict, max_len=20):
+        # 🎯 FIX 1 & 2: Call serialize_slang_math on envelope dict to get real tokens (e.g. NODE:FRAC)
+        token_strings = serialize_slang_math(envelope_dict)
+        if isinstance(token_strings, str):
+            token_list = token_strings.split()
         else:
-            text_str = str(text_or_tokens)
+            token_list = token_strings
             
-        # 🎯 FIX: Use the pipeline's real SLaNg tokenizer mapping
-        if HAS_REAL_TOKENIZER:
-            encoded = self.tokenizer.encode(text_str)
-        else:
-            # Fallback to precise vocab mapping if file exists but module fails
-            tokens = text_str.split()
-            encoded = [self.vocab_mapping.get(t, self.vocab_mapping.get("<unk>", 3)) for t in tokens]
-            
-        # Handle padding securely according to schema matching
+        # Map tokens to real vocab IDs safely falling back to <unk>
+        encoded = [vocab_mapping.get(t, vocab_mapping.get("<unk>", 3)) for t in token_list]
+        
         if len(encoded) < max_len:
             encoded += [0] * (max_len - len(encoded))
         return torch.tensor(encoded[:max_len], dtype=torch.long)
         
     def __getitem__(self, idx):
         item = self.data[idx]
-        # Align all source and target sequences to the real tokenizer's embedding space
         return {
-            "src_seq": self._real_tokenize_and_pad(item["src_tokens"]),
-            "tgt_in_seq": self._real_tokenize_and_pad(item["tgt_input_tokens"]),
-            "tgt_out_seq": self._real_tokenize_and_pad(item["tgt_output_tokens"]),
+            "src_seq": self._tokenize_envelope_to_ids(item["src_tokens"]),
+            "tgt_in_seq": self._tokenize_envelope_to_ids(item["tgt_input_tokens"]),
+            "tgt_out_seq": self._tokenize_envelope_to_ids(item["tgt_output_tokens"]),
             "rule_id": torch.tensor(item["rule_ids"], dtype=torch.long),
             "v_state": torch.tensor(item["verification_state"], dtype=torch.float)
         }
 
 def main():
-    print("--- 🏋️ Running Tokenizer-Aligned Pipeline System ---")
-    v_size = config["vocab_size"]
+    print(f"--- 🏋️ Running Tokenizer-Aligned Pipeline (Vocab Size: {REAL_VOCAB_SIZE}) ---")
+    
+    # Run data generator before building loader to guarantee fresh schema paths
+    import problem_generator
+    problem_generator.generate_slang_data()
     
     train_loader = DataLoader(
-        SlangTrainingDataset("data/splits/train.jsonl", vocab_size=v_size), 
+        SlangTrainingDataset("data/splits/train.jsonl"), 
         batch_size=config["batch_size"], 
         shuffle=True
     )
     
     model = CalculusSolverModel(
-        vocab_size=v_size,
+        vocab_size=REAL_VOCAB_SIZE,
         hidden_dim=config["hidden_dim"]
     )
     optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
@@ -93,7 +77,7 @@ def main():
         optimizer.zero_grad()
         token_logits, rule_logits, verifier_logits = model(batch["src_seq"], batch["tgt_in_seq"])
         
-        raw_loss_seq = criterion_sequence(token_logits.view(-1, v_size), batch["tgt_out_seq"].view(-1))
+        raw_loss_seq = criterion_sequence(token_logits.view(-1, REAL_VOCAB_SIZE), batch["tgt_out_seq"].view(-1))
         raw_loss_seq = raw_loss_seq.view(batch["src_seq"].size(0), -1).mean(dim=-1)
         
         mask_correct_steps = (batch["v_state"] == 1.0).float()
@@ -114,7 +98,7 @@ def main():
             
     Path("checkpoints").mkdir(exist_ok=True)
     torch.save(model.state_dict(), "checkpoints/checkpoint_epoch_1.pt")
-    print("✨ SLaNg Checkpoint successfully saved and aligned with vocabulary.")
+    print("✨ SLaNg Checkpoint successfully saved.")
 
 if __name__ == "__main__":
-    main()s
+    main()

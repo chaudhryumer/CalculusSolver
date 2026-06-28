@@ -1,39 +1,37 @@
 import sys
 import json
 import torch
-from pathlib import Path
 from solver_model import CalculusSolverModel
-
-try:
-    from tokenizer.slang_serializer import SlangTokenizer
-    HAS_REAL_TOKENIZER = True
-except (ImportError, ModuleNotFoundError):
-    HAS_REAL_TOKENIZER = False
+from tokenizer.slang_serializer import serialize_slang_math
 
 with open("config.json", "r") as cfg_file:
     config = json.load(cfg_file)
 
+with open("vocab.json", "r", encoding="utf-8") as f:
+    vocab_mapping = json.load(f)
+REAL_VOCAB_SIZE = len(vocab_mapping)
+
 def evaluate_cli_input():
     if len(sys.argv) < 2:
-        print("💡 Usage: python predict.py \"d/dx[x^3]\"")
+        print("💡 Usage: python predict.py '{\"op\": \"diff\", \"var\": \"x\", \"expr\": {\"type\": \"pow\", \"base\": \"x\", \"exp\": 3}}'")
         return
         
-    user_input = sys.argv[1]
-    print(f"📥 Real Prompt Parsed: {user_input}")
-    v_size = config["vocab_size"]
+    try:
+        # Expect input as a valid JSON envelope string from CLI
+        user_envelope = json.loads(sys.argv[1])
+    except Exception:
+        print("❌ Error: Input must be a valid JSON envelope dictionary string.")
+        return
+        
+    print(f"📥 Envelope Received: {user_envelope}")
     
-    # 🎯 FIX: Use real team tokenizer or vocab mapping to build input tensors
-    if HAS_REAL_TOKENIZER:
-        tokenizer = SlangTokenizer()
-        encoded_src = tokenizer.encode(user_input)
+    token_strings = serialize_slang_math(user_envelope)
+    if isinstance(token_strings, str):
+        token_list = token_strings.split()
     else:
-        vocab_mapping = {}
-        vocab_path = Path("vocab.json")
-        if vocab_path.exists():
-            with open(vocab_path, "r", encoding="utf-8") as f:
-                vocab_mapping = json.load(f)
-        tokens = user_input.split()
-        encoded_src = [vocab_mapping.get(t, vocab_mapping.get("<unk>", 3)) for t in tokens]
+        token_list = token_strings
+        
+    encoded_src = [vocab_mapping.get(t, vocab_mapping.get("<unk>", 3)) for t in token_list]
 
     if len(encoded_src) < 20:
         encoded_src += [0] * (20 - len(encoded_src))
@@ -41,7 +39,7 @@ def evaluate_cli_input():
     dummy_tgt = torch.zeros((1, 20), dtype=torch.long)
     
     rules_inverse = {0: "power rule", 1: "trig derivative", 2: "exponential rule", 3: "logarithmic rule"}
-    model = CalculusSolverModel(vocab_size=v_size, hidden_dim=config["hidden_dim"])
+    model = CalculusSolverModel(vocab_size=REAL_VOCAB_SIZE, hidden_dim=config["hidden_dim"])
     
     try:
         model.load_state_dict(torch.load("checkpoints/checkpoint_epoch_1.pt"))
