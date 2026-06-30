@@ -108,12 +108,12 @@ def serialize_slang_math(node: Any) -> List[str]:
             coeff_val = float(coeff)
         except (ValueError, TypeError) as exc:
             raise ValueError(f"TERM node missing numeric coeff: {n}") from exc
-
+        
         # Convert float to int if it's a whole number
         if coeff_val.is_integer():
             coeff_val = int(coeff_val)
         tokens.append(f"{COEF_PREFIX}{coeff_val}")
-
+        
         var_dict = n.get("var")
         if var_dict and isinstance(var_dict, dict):
             # Sort variables alphabetically to match JS sort
@@ -209,7 +209,7 @@ def deserialize_slang_math(tokens: List[str]) -> Any:
         index = expect_token(index, DENO)
         denominator_terms, index = parse_wrapped_term_list(index)
         index = expect_token(index, CLOSE)
-
+        
         return {
             "numi": {"terms": numerator_terms},
             "deno": {"terms": denominator_terms},
