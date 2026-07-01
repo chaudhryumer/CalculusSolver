@@ -52,7 +52,7 @@ CalculusSolver/
 ## Installation & Local Development
 
 ### 1. Minimal Installation (Fallback Mode)
-For development, testing, and standard Vercel deployments, install the lightweight dependencies:
+For development, testing, and standard Vercel deployments, install the lightweight dependencies. Local dev and Vercel use `requirements.txt` only. Neural/local training uses `requirements-neural.txt` (see below) — do not install it before deploying to Vercel.
 ```bash
 pip install -r requirements.txt
 ```
@@ -63,7 +63,7 @@ uvicorn api.app:app --reload --port 8000
 ```
 
 ### 2. Full Neural Installation (Optional)
-If you want to run neural inference locally with model weights, install the neural requirements:
+If you want to run neural inference locally with model weights, install the neural requirements (which includes PyTorch and NumPy):
 ```bash
 pip install -r requirements-neural.txt
 ```
@@ -163,3 +163,6 @@ Deploying the CalculusSolver API to Vercel is simple. You can use the Vercel CLI
 vercel
 ```
 Or connect your GitHub repository containing this codebase directly to your Vercel dashboard. Vercel will automatically read `vercel.json`, build the serverless functions using `@vercel/python`, and expose the endpoints.
+
+### Hosting & Deployment Decision
+See [docs/HOSTING_DECISION.md](docs/HOSTING_DECISION.md) for details on why the PyTorch model is excluded from the Vercel serverless deployment and the API uses `FallbackSolver` by default.

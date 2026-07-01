@@ -2,10 +2,15 @@
 
 This guide walks you through running the CalculusSolver backend locally, using Groq as the primary model.
 
+> **Note:** A GROQ_API_KEY is optional. Without one, the API runs in
+> `fallback` mode (deterministic polynomial solver) — fully functional
+> for diff/partial/integrate/gradient/tangent_line. See DATASET_REPORT.md
+> for the current rule coverage gap between fallback and neural modes.
+
 ## Prerequisites
 - **Python 3.10+**
 - **Git**
-- A **Groq API Key** (You can obtain one from the [Groq Console](https://console.groq.com/keys))
+- (Optional) A **Groq API Key** for intelligent LLM-backed solving (obtain from [Groq Console](https://console.groq.com/keys))
 
 ## Setup Instructions
 
@@ -32,9 +37,9 @@ This guide walks you through running the CalculusSolver backend locally, using G
    pip install -r requirements.txt
    ```
 
-4. **Configure Environment Variables**
-   The application requires a Groq API key to process complex calculus requests intelligently.
-   Create a `.env` file in the root of the project or export the variable in your shell:
+4. **Configure Environment Variables (Optional)**
+   The application can use a Groq API key to process complex calculus requests intelligently.
+   If you want to use Groq, create a `.env` file in the root of the project or export the variable in your shell:
    ```bash
    # Linux/macOS
    export GROQ_API_KEY="your-groq-api-key-here"
