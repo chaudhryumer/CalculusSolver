@@ -108,6 +108,9 @@ def _resolve_model_path():
     return None, None
 
 
+# NOTE: keep `groq` and `torch` imports lazy (inside the branches below).
+# The Vercel build only installs requirements.txt (no torch/groq-heavy deps).
+# A top-level import here will break every serverless function at import time.
 def get_solver():
     """
     Lazy-load and return the solver singleton.

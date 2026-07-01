@@ -99,6 +99,34 @@ print("STRUCT:OPEN correctly registered at ID 23")
 
 ---
 
+## [RESOLVED] Vercel build fails due to empty website/ directory
+
+**Discovered:** During deployment packaging audit (Task 4)  
+**Fixed:** Removed website build steps from vercel.json  
+**Severity:** High — completely blocks Vercel deployment  
+**Affected path:** Deployment / API hosting
+
+### What was wrong
+
+`vercel.json` contained a `buildCommand` (`cd website && npm install && npm run build`) and an `outputDirectory` (`website/dist`). However, the `website/` directory in this repository is an uninitialized or empty submodule with no `package.json`.
+
+### Why it mattered
+
+Vercel's build process executes the `buildCommand` before attempting to deploy any serverless functions. Because `npm install` fails in an empty directory without a package definition, the entire build process would crash. This prevented the Python API functions under `api/` from ever being built or deployed, resulting in a completely broken deployment pipeline.
+
+### The fix
+
+Since the focus is currently on an API-only deployment (and the frontend is either non-existent or managed elsewhere), the `buildCommand` and `outputDirectory` keys were entirely removed from `vercel.json`. Vercel now correctly defaults to only building the Python functions defined in the `builds` array.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `vercel.json` | Removed `buildCommand` and `outputDirectory` keys |
+| `docs/KNOWN_ISSUES.md` | Added this entry |
+
+---
+
 ## Filing new issues
 
 To add a new entry, copy the template below and fill it in:
