@@ -12,7 +12,7 @@ def validate_slang_data():
     base_dir = Path("data/splits")
     required_keys = ["src_tokens", "tgt_input_tokens", "tgt_output_tokens", "rule_ids", "verification_state"]
 
-    print("--- 🩺 SLaNg Data Validation Reports ---")
+    print("--- SLaNg Data Validation Reports ---")
     any_failures = False
 
     for s in splits:
@@ -25,7 +25,7 @@ def validate_slang_data():
         with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
-        print(f"📊 Analyzing {s}: Total Row Records = {len(lines)}")
+        print(f"Analyzing {s}: Total Row Records = {len(lines)}")
 
         key_failures = 0
         serializer_failures = 0
@@ -54,16 +54,16 @@ def validate_slang_data():
 
         if key_failures or serializer_failures:
             any_failures = True
-            print(f"   ❌ {key_failures} rows failed key checks, {serializer_failures} rows failed serializer round-trip")
-            print(f"   ↳ first failure: {first_error}")
+            print(f"   {key_failures} rows failed key checks, {serializer_failures} rows failed serializer round-trip")
+            print(f"   first failure: {first_error}")
         else:
-            print(f"   ✅ All {len(lines)} rows have required keys and serialize cleanly.")
+            print(f"   All {len(lines)} rows have required keys and serialize cleanly.")
 
     if any_failures:
-        print("\n❌ Validation FAILED — see failures above.")
+        print("\nValidation FAILED — see failures above.")
         sys.exit(1)
     else:
-        print("\n✅ All splits passed schema and serializer validation.")
+        print("\nAll splits passed schema and serializer validation.")
 
 
 if __name__ == "__main__":

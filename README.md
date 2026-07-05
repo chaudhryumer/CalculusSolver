@@ -5,8 +5,8 @@ A production-ready Python API designed to solve calculus expressions represented
 ## Key Features
 
 1. **Dual Execution Modes**:
-   - **Neural Mode**: Automatically activated if a PyTorch model checkpoint is detected (see checkpoint resolution priority below). Fits full transformer-based inference.
-   - **Fallback Mode**: Automatically active by default. Runs a deterministic, pure-Python polynomial solver (supports `diff`, `partial`, `integrate`, `gradient`, and `tangent_line` operations). Requires zero heavy dependencies, making it extremely fast and lightweight.
+   - **Production Mode (Vercel)**: Uses `FallbackSolver` (deterministic, pure-Python polynomial solver supporting `diff`, `partial`, `integrate`, `gradient`, and `tangent_line`). Optionally uses `GroqSolver` if `GROQ_API_KEY` is set. Requires zero heavy dependencies, making it extremely fast and lightweight.
+   - **Neural Mode (Local/Research Only)**: Available for local development and training research. Automatically activated if a PyTorch model checkpoint is detected. Not deployed to Vercel due to the 250MB serverless size cap (see [HOSTING_DECISION.md](docs/HOSTING_DECISION.md)).
 2. **Pure Python Architecture**:
    - Re-implemented SLaNg AST validation, algebraic verification, and LaTeX conversion in 100% pure Python.
    - Zero Node.js subprocesses. No dependency on local Node installations.
@@ -165,4 +165,5 @@ vercel
 Or connect your GitHub repository containing this codebase directly to your Vercel dashboard. Vercel will automatically read `vercel.json`, build the serverless functions using `@vercel/python`, and expose the endpoints.
 
 ### Hosting & Deployment Decision
-See [docs/HOSTING_DECISION.md](docs/HOSTING_DECISION.md) for details on why the PyTorch model is excluded from the Vercel serverless deployment and the API uses `FallbackSolver` by default.
+
+> **Production scope**: The Vercel deployment runs `FallbackSolver` (deterministic polynomial solver) and optionally `GroqSolver` (LLM-based). The PyTorch neural model is excluded from production due to the 250MB serverless size cap. Neural mode is available for local training, research, and evaluation only. See [docs/HOSTING_DECISION.md](docs/HOSTING_DECISION.md) for the full rationale.

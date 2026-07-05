@@ -74,3 +74,34 @@ jobs:
         run: pytest tests/ -v --tb=short
         env:
           GROQ_API_KEY: ""
+
+  benchmark-integrity:
+    name: Verify benchmark dataset is not empty
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check checkpoint references have matching benchmarks
+        run: |
+          echo "--- Checking if checkpoints/final/best.pt is referenced ---"
+          REFS=$(grep -rl "checkpoints/final/best.pt" --include="*.py" --include="*.md" . || true)
+          if [ -n "$REFS" ]; then
+            echo "Found references to checkpoints/final/best.pt in:"
+            echo "$REFS"
+            echo ""
+            echo "--- Checking eval/benchmarks/ is not empty ---"
+            BENCHMARKS=$(find eval/benchmarks -name "*.json" 2>/dev/null | head -1)
+            if [ -z "$BENCHMARKS" ]; then
+              echo "FAIL: checkpoints/final/best.pt is referenced but eval/benchmarks/ has no .json files!"
+              echo "This will cause run_pipeline.py to silently report 0.0 accuracy."
+              echo "Run: python eval/generate_benchmarks.py"
+              exit 1
+            else
+              echo "OK: eval/benchmarks/ contains benchmark files."
+              find eval/benchmarks -name "*.json" -exec echo "  - {}" \;
+            fi
+          else
+            echo "No references to checkpoints/final/best.pt found. Skipping check."
+          fi

@@ -11,7 +11,7 @@ if project_root not in sys.path:
 try:
     # 🎯 FIX 2 & 3: Import official team Transformer module and check parameters signatures
     from model.transformer import CalculusSolverModel
-    print("🎯 [Shared Architecture] Successfully hooked into the official team Transformer layout!")
+    print("[Shared Architecture] Successfully hooked into the official team Transformer layout!")
 
 except (ImportError, ModuleNotFoundError):
     # Fallback to structural representation with matched key routing if module is absent locally

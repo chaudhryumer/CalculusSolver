@@ -261,7 +261,8 @@ def beam_search(
     root_rule_id = int(root_rule_ids[0].item())
     rule_embeddings = model.rule_head.embed_rules(root_rule_ids)
 
-    all_candidate_tokens = [id_to_token[idx] for idx in range(len(id_to_token))]
+    vocab_size = max(id_to_token.keys()) + 1
+    all_candidate_tokens = [id_to_token.get(idx, "[PAD]") for idx in range(vocab_size)]
     beams = [
         {
             "tokens": [bos_id],

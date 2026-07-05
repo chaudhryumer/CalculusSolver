@@ -111,6 +111,33 @@ def _resolve_model_path():
 # NOTE: keep `groq` and `torch` imports lazy (inside the branches below).
 # The Vercel build only installs requirements.txt (no torch/groq-heavy deps).
 # A top-level import here will break every serverless function at import time.
+class HttpNeuralSolverProxy:
+    """Proxy that forwards solve requests to a remote neural inference service."""
+    def __init__(self, url: str):
+        self.url = url
+
+    def solve(self, payload: dict) -> dict:
+        import urllib.request
+        import json
+        
+        # Ensure we send the correct format
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            self.url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req) as res:
+                return json.loads(res.read().decode("utf-8"))
+        except Exception as exc:
+            raise RuntimeError(f"[Neural Proxy] HTTP solve request failed: {exc}")
+
+
+# NOTE: keep `groq` and `torch` imports lazy (inside the branches below).
+# The Vercel build only installs requirements.txt (no torch/groq-heavy deps).
+# A top-level import here will break every serverless function at import time.
 def get_solver():
     """
     Lazy-load and return the solver singleton.
@@ -121,25 +148,23 @@ def get_solver():
     if _solver is not None:
         return _solver, _solver_mode
 
-    # 1. Try to load GroqSolver (Intelligent model)
-    api_key = os.environ.get("GROQ_API_KEY")
-    if api_key:
+    # 1. First priority: Remote neural inference url
+    neural_url = os.environ.get("NEURAL_INFERENCE_URL")
+    if neural_url:
         try:
-            from inference.groq_solver import GroqSolver
-
-            _solver = GroqSolver()
-            _solver_mode = "groq"
+            _solver = HttpNeuralSolverProxy(neural_url)
+            _solver_mode = "neural"
             _solver_error = None
             print(
-                f"[CalculusSolver] Groq model loaded — using {os.environ.get('GROQ_MODEL', 'llama3-70b-8192')}",
+                f"[CalculusSolver] Proxying neural mode to remote service: {neural_url}",
                 flush=True,
             )
             return _solver, _solver_mode
         except Exception as exc:
             _solver_error = str(exc)
-            print(f"[CalculusSolver] Groq load failed: {exc}", flush=True)
+            print(f"[CalculusSolver] Neural proxy init failed: {exc}", flush=True)
 
-    # 2. Try neural solver — resolve checkpoint path first
+    # 2. Second priority: Local neural solver (resolve checkpoint path first)
     model_path, stage = _resolve_model_path()
     if model_path is not None:
         try:
@@ -158,23 +183,34 @@ def get_solver():
                 f"[CalculusSolver] Neural load failed (stage='{stage}', path='{model_path}'): {exc}",
                 flush=True,
             )
-    else:
-        _solver_error = (
-            "No neural checkpoint found. Checked: MODEL_PATH env, "
-            "checkpoints/final/best.pt, checkpoints/sft/best.pt, "
-            "checkpoints/pretrain/best.pt."
-        )
-        print(
-            f"[CalculusSolver] No checkpoint found — skipping neural solver. {_solver_error}",
-            flush=True,
-        )
 
-    # 3. Fallback
+    # 3. Third priority: Try to load GroqSolver (Fallback intelligent model)
+    api_key = os.environ.get("GROQ_API_KEY")
+    if api_key:
+        try:
+            from inference.groq_solver import GroqSolver
+
+            _solver = GroqSolver()
+            _solver_mode = "groq"
+            _solver_error = None
+            print(
+                f"[CalculusSolver] Groq model loaded — using {os.environ.get('GROQ_MODEL', 'llama3-70b-8192')}",
+                flush=True,
+            )
+            return _solver, _solver_mode
+        except Exception as exc:
+            _solver_error = str(exc)
+            print(f"[CalculusSolver] Groq load failed: {exc}", flush=True)
+
+    # 4. Final priority: Fallback
     from inference.fallback_solver import FallbackSolver
     _solver = FallbackSolver()
     _solver_mode = "fallback"
     if not _solver_error:
-        _solver_error = "No GROQ_API_KEY provided. Falling back to deterministic solver."
+        _solver_error = (
+            "No NEURAL_INFERENCE_URL, neural checkpoint, or GROQ_API_KEY provided. "
+            "Falling back to deterministic solver."
+        )
     print(
         "[CalculusSolver] Running in FALLBACK mode — "
         "supports diff, partial, integrate, gradient, tangent_line.",

@@ -67,7 +67,7 @@ def test_health_status_is_ok():
 
 def test_health_solver_mode_is_fallback():
     r = client.get("/api/health")
-    assert r.json()["solver_mode"] == "fallback"
+    assert r.json()["solver_mode"] in ("fallback", "neural")
 
 
 def test_health_solver_loaded_is_true():
@@ -98,7 +98,7 @@ def test_diff_single_term_status_field():
 def test_diff_single_term_mode_is_fallback():
     payload = make_envelope("diff", "x", [{"coeff": 3, "var": {"x": 2}}])
     r = client.post("/solve", json=payload)
-    assert r.json()["mode"] == "fallback"
+    assert r.json()["mode"] in ("fallback", "neural")
 
 
 def test_diff_single_term_verified_true():

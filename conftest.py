@@ -50,7 +50,7 @@ def reset_solver_singleton(monkeypatch):
     os.environ.pop("GROQ_API_KEY", None)
     os.environ.pop("MODEL_PATH", None)
 
-    # ── Reset the singleton and monkeypatch _resolve_model_path ───────────────
+    # ── Reset the singleton ───────────────────────────────────────────────────
     try:
         import api._shared as _shared
 
@@ -58,17 +58,7 @@ def reset_solver_singleton(monkeypatch):
         _shared._solver = None
         _shared._solver_mode = "unloaded"
         _shared._solver_error = None
-
-        # Force _resolve_model_path to always return (None, None).
-        # This makes get_solver() skip the neural block unconditionally,
-        # regardless of what checkpoint files exist on disk.
-        # monkeypatch.setattr automatically restores the original function
-        # after each test — no manual cleanup needed.
-        monkeypatch.setattr(
-            _shared,
-            "_resolve_model_path",
-            lambda: (None, None),
-        )
+        monkeypatch.setattr(_shared, "_resolve_model_path", lambda: (None, None))
 
     except ImportError:
         # api._shared not importable (e.g. during unit-only runs where
