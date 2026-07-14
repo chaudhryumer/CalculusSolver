@@ -1,6 +1,6 @@
 {
-  "_comment": "SLaNg vocabulary token string to integer ID mapping. STRUCT:OPEN is assigned ID 23 (gap after operation tokens) because IDs 4-9 were already fully occupied when this omission was discovered. Renumbering existing IDs would break trained model weights.",
-  "_version": "1.1",
+  "_comment": "SLaNg vocabulary token string to integer ID mapping. STRUCT:OPEN is assigned ID 23 (gap after operation tokens) because IDs 4-9 were already fully occupied when this omission was discovered. Renumbering existing IDs would break trained model weights. Updated to v1.2 to include transcendental operation tokens OP:sin, OP:cos, OP:tan, OP:exp, and OP:ln at IDs 24-28.",
+  "_version": "1.2",
   "special_tokens": {
     "[PAD]": 0,
     "[BOS]": 1,
@@ -29,7 +29,12 @@
     "OP:limit": 19,
     "OP:critical_pts": 20,
     "OP:dir_deriv": 21,
-    "OP:taylor": 22
+    "OP:taylor": 22,
+    "OP:sin": 24,
+    "OP:cos": 25,
+    "OP:tan": 26,
+    "OP:exp": 27,
+    "OP:ln": 28
   },
   "opvar_tokens": {
     "OPVAR:x": 30,
@@ -83,7 +88,7 @@
     "EXP:-1": 82,
     "EXP:0": 83,
     "EXP:1": 84,
-    "EXP:2": 85,
+    "EXP:25": 85,
     "EXP:3": 86,
     "EXP:4": 87,
     "EXP:5": 88,
